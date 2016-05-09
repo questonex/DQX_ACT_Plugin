@@ -240,10 +240,8 @@ namespace DQX_ACT_Plugin
 
     void OnCombatEnd(bool isImport, CombatToggleEventArgs encounterInfo)
     {
-      DQX_ACT_Plugin.LogParserMessage(encounterInfo.encounter.Title);
       encounterInfo.encounter.Title = LogParse.encounter;
     }
-
 
   }
 #endregion
@@ -311,7 +309,7 @@ namespace DQX_ACT_Plugin
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
           encounter = target;
           Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, encounter, encounter);
-          DQX_ACT_Plugin.LogParserMessage("Open: "+target);
+          // DQX_ACT_Plugin.LogParserMessage("Open: "+target);
           return;
         }
 
@@ -320,7 +318,7 @@ namespace DQX_ACT_Plugin
         if (m.Success) {
           //          Advanced_Combat_Tracker.ActGlobals.oFormActMain.ChangeZone(target);
           Advanced_Combat_Tracker.ActGlobals.oFormActMain.EndCombat(true);
-          DQX_ACT_Plugin.LogParserMessage("Close: ");
+          // DQX_ACT_Plugin.LogParserMessage("Close: ");
           return;
         }
         
