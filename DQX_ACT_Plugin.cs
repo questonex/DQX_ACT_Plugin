@@ -181,6 +181,8 @@ namespace DQX_ACT_Plugin
         // Set primary parser delegate for processing data
         Advanced_Combat_Tracker.ActGlobals.oFormActMain.BeforeLogLineRead += LogParse.BeforeLogLineRead;
 
+        Advanced_Combat_Tracker.ActGlobals.oFormActMain.ZoneChangeRegex = new Regex(@"test", RegexOptions.Compiled);
+
         Advanced_Combat_Tracker.ActGlobals.oFormActMain.OnCombatEnd += new CombatToggleEventDelegate(OnCombatEnd);
         
         // TODO: set up Zone Name
@@ -271,6 +273,7 @@ namespace DQX_ACT_Plugin
     public static Regex regex_open = new Regex(@"(?<target>[^ ]+?)と 戦闘開始！$");
     public static Regex regex_close = new Regex(@" (やっつけた！|いなくなった！|ぜんめつした。|戦いをやめた。)$");
     public static Regex regex_action = new Regex(@"^(?<actor>.+?)(の|は) (?<action>.+?)！$");
+    public static Regex regex_action2 = new Regex(@"^(?<action>[^ ]+?)！$");
     public static Regex regex_hit = new Regex(@"^ → (?<target>.+?)(に|は) (?<damage>\d+)のダメージ(！|を うけた！)$");
     public static Regex regex_miss = new Regex(@"^ → ミス！ (?<target>.+?)(に|は) ダメージを (あたえられない|うけない)！$");
     public static Regex regex_crit = new Regex(@"^ → (かいしんの|つうこんの|じゅもんが) .+?！$");
@@ -316,7 +319,7 @@ namespace DQX_ACT_Plugin
         // close
         m = regex_close.Match(l);
         if (m.Success) {
-          //          Advanced_Combat_Tracker.ActGlobals.oFormActMain.ChangeZone(target);
+          // Advanced_Combat_Tracker.ActGlobals.oFormActMain.ChangeZone("test");
           Advanced_Combat_Tracker.ActGlobals.oFormActMain.EndCombat(true);
           // DQX_ACT_Plugin.LogParserMessage("Close: ");
           return;
@@ -325,9 +328,19 @@ namespace DQX_ACT_Plugin
         // action
         if (!l.StartsWith(" →")) {
           m = regex_action.Match(l);
-          if (!m.Success) return;
-          actor = m.Groups["actor"].Success ? DecodeString(m.Groups["actor"].Value) : "";
-          action = m.Groups["action"].Success ? DecodeString(m.Groups["action"].Value) : "";
+          if (m.Success)
+          {
+            actor = m.Groups["actor"].Success ? DecodeString(m.Groups["actor"].Value) : "";
+            action = m.Groups["action"].Success ? DecodeString(m.Groups["action"].Value) : "";
+            return;
+          }
+
+          m = regex_action2.Match(l);
+          if (m.Success)
+          {
+            actor = "不明";
+            action = m.Groups["action"].Success ? DecodeString(m.Groups["action"].Value) : "";
+          }
           return;
         }
 
@@ -415,6 +428,8 @@ namespace DQX_ACT_Plugin
         m = regex_dead.Match(l);
         if (m.Success) {
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
+
+//          DQX_ACT_Plugin.LogParserMessage("Death: " + logInfo.logLine);
 
           //          if (Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, actor, encounter))
           {
