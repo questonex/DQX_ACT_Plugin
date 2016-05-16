@@ -184,7 +184,17 @@ namespace DQX_ACT_Plugin
         Advanced_Combat_Tracker.ActGlobals.oFormActMain.ZoneChangeRegex = new Regex(@"test", RegexOptions.Compiled);
 
         Advanced_Combat_Tracker.ActGlobals.oFormActMain.OnCombatEnd += new CombatToggleEventDelegate(OnCombatEnd);
-        
+
+        //
+
+        if (!CombatantData.ColumnDefs.ContainsKey("Class"))
+        {
+          CombatantData.ColumnDefs.Add("Class", new CombatantData.ColumnDef("Class", false, "CHAR(64)", "Class", (Data) => { return (string)Data.Tags["Class"]; }, (Data) => { return (string)Data.Tags["Class"]; }, (Left, Right) => { return 0; }));
+          CombatantData.ExportVariables.Add("Class", new CombatantData.TextExportFormatter("class", "Class", "class", (Data, Extra) => { return (string)Data.Tags["Class"]; }));
+          ActGlobals.oFormActMain.ValidateTableSetup();
+          ActGlobals.oFormActMain.ValidateLists();
+        }
+
         // TODO: set up Zone Name
 
         lblStatus.Text = "DQX Plugin Started.";
@@ -202,7 +212,7 @@ namespace DQX_ACT_Plugin
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.UpdateCheckClicked -= this.UpdateCheckClicked;
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.BeforeLogLineRead -= LogParse.BeforeLogLineRead;
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.OnCombatEnd -= OnCombatEnd;
-      
+
       if (lblStatus != null)
       {
         lblStatus.Text = "DQX Plugin Unloaded.";
@@ -210,14 +220,12 @@ namespace DQX_ACT_Plugin
       }
     }
 
-
     public void UpdateCheckClicked()
     {
     }
 
     private void UpdateACTTables()
     {
-
     }
 
     public static void LogParserMessage(string message)
@@ -243,6 +251,17 @@ namespace DQX_ACT_Plugin
     void OnCombatEnd(bool isImport, CombatToggleEventArgs encounterInfo)
     {
       encounterInfo.encounter.Title = LogParse.encounter;
+      foreach (var data in encounterInfo.encounter.Items.Values)
+      {
+        if (LogParse.NameClass.ContainsKey(data.Name))
+        {
+          data.Tags["Class"] = LogParse.NameClass[data.Name];
+        }
+        else
+        {
+          data.Tags["Class"] = "";
+        }
+      }
     }
 
   }
@@ -270,94 +289,111 @@ namespace DQX_ACT_Plugin
       return ret;
     }
 
-    public static Regex regex_open = new Regex(@"(?<target>[^ ]+?)と 戦闘開始！$");
-    public static Regex regex_close = new Regex(@" (やっつけた！|いなくなった！|ぜんめつした。|戦いをやめた。)$");
-    public static Regex regex_action = new Regex(@"^(?<actor>.+?)(の|は) (?<action>.+?)！$");
-    public static Regex regex_action2 = new Regex(@"^(?<action>[^ ]+?)！$");
-    public static Regex regex_hit = new Regex(@"^ → (?<target>.+?)(に|は) (?<damage>\d+)のダメージ(！|を うけた！)$");
-    public static Regex regex_miss = new Regex(@"^ → ミス！ (?<target>.+?)(に|は) ダメージを (あたえられない|うけない)！$");
-    public static Regex regex_crit = new Regex(@"^ → (かいしんの|つうこんの|じゅもんが) .+?！$");
-
-    public static Regex regex_heal = new Regex(@"^ → (?<target>.+?)の ＨＰが (?<damage>\d+)回復した！$");
-    public static Regex regex_dead = new Regex(@"^ → (?<target>.+?)は しんでしまった。$");
-
-    public static string encounter;
-    private static string actor;
-    private static string action;
-
-    private static bool isCritical = false;
-
     public static void BeforeLogLineRead(bool isImport, Advanced_Combat_Tracker.LogLineEventArgs logInfo)
     {
       string l = logInfo.logLine;
-      
+
       try
       {
         DateTime timestamp = ParseLogDateTime(l);
 
-        char[] dt = {'\t'};
+        char[] dt = { '\t' };
         string[] logParts = l.Split(dt);
         int flag = Convert.ToInt32(logParts[2], 16);
-        if (flag > 7) {
+        if (flag > 7)
+        {
           return;
         }
 
         l = logParts[7];
-        
+
         Match m;
 
         // open
         m = regex_open.Match(l);
-        if (m.Success) {
+        if (m.Success)
+        {
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
           encounter = target;
           Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, encounter, encounter);
           // DQX_ACT_Plugin.LogParserMessage("Open: "+target);
+          NameClass.Clear();
           return;
         }
 
         // close
         m = regex_close.Match(l);
-        if (m.Success) {
+        if (m.Success)
+        {
           // Advanced_Combat_Tracker.ActGlobals.oFormActMain.ChangeZone("test");
           Advanced_Combat_Tracker.ActGlobals.oFormActMain.EndCombat(true);
           // DQX_ACT_Plugin.LogParserMessage("Close: ");
           return;
         }
-        
+
         // action
-        if (!l.StartsWith(" →")) {
+        if (!l.StartsWith(" →"))
+        {
           m = regex_action.Match(l);
           if (m.Success)
           {
             actor = m.Groups["actor"].Success ? DecodeString(m.Groups["actor"].Value) : "";
             action = m.Groups["action"].Success ? DecodeString(m.Groups["action"].Value) : "";
+            if (!NameClass.ContainsKey(actor))
+            {
+              if (SkillClass.ContainsKey(action))
+              {
+                NameClass.Add(actor, SkillClass[action]);
+              }
+            }
             return;
           }
-
           m = regex_action2.Match(l);
           if (m.Success)
           {
             actor = "不明";
             action = m.Groups["action"].Success ? DecodeString(m.Groups["action"].Value) : "";
+            return;
+          }
+
+          // death
+          m = regex_dead2.Match(l);
+          if (m.Success)
+          {
+            string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
+            Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(
+              (int)Advanced_Combat_Tracker.SwingTypeEnum.Healing,
+              false,
+              "",
+              "不明",
+              "Death",
+              Advanced_Combat_Tracker.Dnum.Death,
+              timestamp,
+              Advanced_Combat_Tracker.ActGlobals.oFormActMain.GlobalTimeSorter,
+              target,
+              "");
+            return;
           }
           return;
         }
 
-        if (!Advanced_Combat_Tracker.ActGlobals.oFormActMain.InCombat) {
+        if (!Advanced_Combat_Tracker.ActGlobals.oFormActMain.InCombat)
+        {
           return;
         }
 
         // crit
         m = regex_crit.Match(l);
-        if (m.Success) {
+        if (m.Success)
+        {
           isCritical = true;
           return;
         }
 
         // damage
         m = regex_hit.Match(l);
-        if (m.Success) {
+        if (m.Success)
+        {
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
 
           // if (Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, actor, encounter))
@@ -380,7 +416,8 @@ namespace DQX_ACT_Plugin
 
         // miss
         m = regex_miss.Match(l);
-        if (m.Success) {
+        if (m.Success)
+        {
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
 
           //          if (Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, actor, encounter))
@@ -403,7 +440,8 @@ namespace DQX_ACT_Plugin
 
         // heal
         m = regex_heal.Match(l);
-        if (m.Success) {
+        if (m.Success)
+        {
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
 
           //          if (Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, actor, encounter))
@@ -426,11 +464,9 @@ namespace DQX_ACT_Plugin
 
         // death
         m = regex_dead.Match(l);
-        if (m.Success) {
+        if (m.Success)
+        {
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
-
-//          DQX_ACT_Plugin.LogParserMessage("Death: " + logInfo.logLine);
-
           //          if (Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, actor, encounter))
           {
             Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(
@@ -471,6 +507,148 @@ namespace DQX_ACT_Plugin
 
       return ret;
     }
+
+    public static Dictionary<string, string> SkillClass = new Dictionary<string, string>()
+    {
+      { "かばう", "戦士" },
+      { "たいあたり", "戦士" },
+      { "やいばくだき", "戦士" },
+      { "チャージタックル", "戦士" },
+      { "真・やいばくだき", "戦士" },
+      //
+      { "魔力の息吹", "魔法使い" },
+      { "魔力かくせい", "魔法使い" },
+      { "マヒャデドス", "魔法使い" },
+      { "メラガイアー", "魔法使い" },
+      //
+      { "マホトラのころも", "僧侶" },
+      { "聖女の守り ", "僧侶" },
+      { "天使の守り", "僧侶" },
+      { "聖なる祈り", "僧侶" },
+      { "ホーリーライト", "僧侶" },
+      { "女神の祝福", "僧侶" },
+      //
+      { "ためる", "武闘家" },
+      { "不撓不屈", "武闘家" },
+      { "めいそう", "武闘家" },
+      { "ためる弐", "武闘家" },
+      { "無念無想", "武闘家" },
+      { "ためる参", "武闘家" },
+      //
+      { "ぬすむ", "盗賊" },
+      { "バナナトラップ ", "盗賊" },
+      { "メガボンバー", "盗賊" },
+      { "ギガボンバー", "盗賊" },
+      { "サプライズラッシュ", "盗賊" },
+      //
+      { "タップダンス", "旅芸人" },
+      { "キラージャグリング", "旅芸人" },
+      { "ハッスルダンス", "旅芸人" },
+      { "エンドオブシーン", "旅芸人" },
+      { "ゴッドジャグリング", "旅芸人" },
+      { "たたかいのビート", "旅芸人" },
+      //
+      { "におうだち", "パラディン" },
+      { "ヘヴィチャージ", "パラディン" },
+      { "大ぼうぎょ", "パラディン" },
+      { "グランドネビュラ", "パラディン" },
+      { "聖騎士の堅陣", "パラディン" },
+      //
+      { "てなずける", "レンジャー" },
+      { "メタルトラップ", "レンジャー" },
+      { "まもりのきり", "レンジャー" },
+      { "オオカミアタック", "レンジャー" },
+      { "あんこくのきり", "レンジャー" },
+      { "ジバルンバ", "レンジャー" },
+      { "フェンリルアタック", "レンジャー" },
+      //
+      { "ファイアフォース", "魔法戦士" },
+      { "アイスフォース", "魔法戦士" },
+      { "ストームフォース", "魔法戦士" },
+      { "ダークフォース", "魔法戦士" },
+      { "ＭＰパサー", "魔法戦士" },
+      { "ライトフォース", "魔法戦士" },
+      { "フォースブレイク", "魔法戦士" },
+      { "マダンテ", "魔法戦士" },
+      //
+      { "サインぜめ", "スーパースター" },
+      { "スキャンダル", "スーパースター" },
+      { "メイクアップ", "スーパースター" },
+      { "ボディーガード呼び", "スーパースター" },
+      { "ベストスマイル", "スーパースター" },
+      { "ゴールドシャワー", "スーパースター" },
+      { "バギムーチョ", "スーパースター" },
+      { "ミリオンスマイル", "スーパースター" },
+      //
+      { "とうこん討ち", "バトルマスター" },
+      { "すてみ", "バトルマスター" },
+      { "もろば斬り", "バトルマスター" },
+      { "無心こうげき", "バトルマスター" },
+      { "天下無双", "バトルマスター" },
+      { "テンションバーン", "バトルマスター" },
+      { "ミラクルブースト", "バトルマスター" },
+      //
+      { "いやしの雨", "賢者" },
+      { "魔導の書", "賢者" },
+      { "しんぴのさとり", "賢者" },
+      { "零の洗礼", "賢者" },
+      { "イオグランデ", "賢者" },
+      { "むげんのさとり", "賢者" },
+      { "ドルマドン", "賢者" },
+      //
+      { "かわいがる", "まもの使い" },
+      { "ブレスクラッシュ", "まもの使い" },
+      { "ＨＰリンク", "まもの使い" },
+      { "ＭＰリンク", "まもの使い" },
+      { "エモノ呼び", "まもの使い" },
+      { "スキルクラッシュ", "まもの使い" },
+      { "ウォークライ", "まもの使い" },
+      //
+      { "チューンナップ", "どうぐ使い" },
+      { "トラップジャマー", "どうぐ使い" },
+      { "磁界シールド", "どうぐ使い" },
+      { "メディカルデバイス", "どうぐ使い" },
+      { "プラズマリムーバー", "どうぐ使い" },
+      //
+      { "もうどくブルース", "踊り子" },
+      { "会心まいしんラップ", "踊り子" },
+      { "祈りのゴスペル", "踊り子" },
+      { "覚醒のアリア", "踊り子" },
+      { "よみがえり節", "踊り子" },
+      { "魔力のバラード", "踊り子" },
+      { "ふういんのダンス", "踊り子" },
+      { "こんらんのダンス", "踊り子" },
+      { "ねむりのダンス", "踊り子" },
+      { "ドラゴンステップ", "踊り子" },
+      { "ビーナスステップ", "踊り子" },
+      { "ロイヤルステップ", "踊り子" },
+      { "つるぎの舞", "踊り子" },
+      { "戦鬼の乱れ舞", "踊り子" },
+      // { "", "" },
+      { "ダミー", "ダミー" }
+    };
+
+    public static Dictionary<string, string> NameClass = new Dictionary<string, string>()
+    {
+    };
+
+    public static Regex regex_open = new Regex(@"(?<target>[^ ]+?)と 戦闘開始！$");
+    public static Regex regex_close = new Regex(@" (やっつけた！|いなくなった！|ぜんめつした。|戦いをやめた。)$");
+    public static Regex regex_action = new Regex(@"^(?<actor>.+?)(の|は) (?<action>.+?)！$");
+    public static Regex regex_action2 = new Regex(@"^(?<action>[^ ]+?)！$");
+    public static Regex regex_hit = new Regex(@"^ → (?<target>.+?)(に|は) (?<damage>\d+)のダメージ(！|を うけた！)$");
+    public static Regex regex_miss = new Regex(@"^ → ミス！ (?<target>.+?)(に|は) ダメージを (あたえられない|うけない)！$");
+    public static Regex regex_crit = new Regex(@"^ → (かいしんの|つうこんの|じゅもんが) .+?！$");
+
+    public static Regex regex_heal = new Regex(@"^ → (?<target>.+?)の ＨＰが (?<damage>\d+)回復した！$");
+    public static Regex regex_dead = new Regex(@"^ → (?<target>.+?)は しんでしまった。$");
+    public static Regex regex_dead2 = new Regex(@"^(?<target>.+?)は しんでしまった。$");
+
+    public static string encounter;
+    private static string actor;
+    private static string action;
+
+    private static bool isCritical = false;
   }
 
 #endregion
