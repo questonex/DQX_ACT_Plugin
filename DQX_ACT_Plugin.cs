@@ -398,18 +398,41 @@ namespace DQX_ACT_Plugin
 
           // if (Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, actor, encounter))
           {
-            Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(
+            MasterSwing ms = new MasterSwing(
               (int)Advanced_Combat_Tracker.SwingTypeEnum.NonMelee,
               isCritical,
               "",
-              actor,
-              action,
               new Advanced_Combat_Tracker.Dnum(int.Parse(m.Groups["damage"].Value, System.Globalization.NumberStyles.AllowThousands)),
               timestamp,
               Advanced_Combat_Tracker.ActGlobals.oFormActMain.GlobalTimeSorter,
-              target,
-              "");
+              action,
+              actor,
+              "",
+              target);
+
+            Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(ms);
+
+            var e = false;
+            foreach (var a in Allies)
+            {
+              if (a.Name == ms.Attacker)
+              {
+                e = true;
+                break;
+              }
+            }
+            if (ms.Attacker == encounter)
+            {
+              e = true;
+            }
+            if (!e)
+            {
+              CombatantData cd = ms.ParentEncounter.GetCombatant(ms.Attacker);
+              Allies.Add(cd);
+            }
+            ms.ParentEncounter.SetAllies(Allies);
           }
+
           isCritical = false;
           return;
         }
@@ -446,18 +469,41 @@ namespace DQX_ACT_Plugin
 
           //          if (Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, actor, encounter))
           {
-            Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(
+            MasterSwing ms = new MasterSwing(
               (int)Advanced_Combat_Tracker.SwingTypeEnum.Healing,
               isCritical,
               "",
-              actor,
-              action,
               new Advanced_Combat_Tracker.Dnum(int.Parse(m.Groups["damage"].Value, System.Globalization.NumberStyles.AllowThousands)),
               timestamp,
               Advanced_Combat_Tracker.ActGlobals.oFormActMain.GlobalTimeSorter,
-              target,
-              "");
+              action,
+              actor,
+              "",
+              target);
+
+            Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(ms);
+
+            var e = false;
+            foreach (var a in Allies)
+            {
+              if (a.Name == ms.Attacker)
+              {
+                e = true;
+                break;
+              }
+            }
+            if (ms.Attacker == encounter)
+            {
+              e = true;
+            }
+            if (!e)
+            {
+              CombatantData cd = ms.ParentEncounter.GetCombatant(ms.Attacker);
+              Allies.Add(cd);
+            }
+            ms.ParentEncounter.SetAllies(Allies);
           }
+
           isCritical = false;
           return;
         }
@@ -636,6 +682,10 @@ namespace DQX_ACT_Plugin
     };
 
     public static Dictionary<string, string> NameClass = new Dictionary<string, string>()
+    {
+    };
+
+    public static List<CombatantData> Allies = new List<CombatantData>()
     {
     };
 
