@@ -251,6 +251,21 @@ namespace DQX_ACT_Plugin
     void OnCombatEnd(bool isImport, CombatToggleEventArgs encounterInfo)
     {
       encounterInfo.encounter.Title = LogParse.encounter;
+
+      if (LogParse.Allies != null && LogParse.Allies.Count > 0)
+      {
+        List<CombatantData> localAllies = new List<CombatantData>(LogParse.Allies.Count);
+        foreach (var name in LogParse.Allies)
+        {
+          var combatant = encounterInfo.encounter.GetCombatant(name);
+          if (combatant != null)
+          {
+            localAllies.Add(encounterInfo.encounter.GetCombatant(name));
+          }
+        }
+        encounterInfo.encounter.SetAllies(localAllies);
+      }
+      
       foreach (var data in encounterInfo.encounter.Items.Values)
       {
         if (LogParse.NameClass.ContainsKey(data.Name))
@@ -305,6 +320,7 @@ namespace DQX_ACT_Plugin
           return;
         }
 
+        string id = logParts[3];
         l = logParts[7];
 
         Match m;
@@ -316,8 +332,8 @@ namespace DQX_ACT_Plugin
           string target = m.Groups["target"].Success ? DecodeString(m.Groups["target"].Value) : "";
           encounter = target;
           Advanced_Combat_Tracker.ActGlobals.oFormActMain.SetEncounter(timestamp, encounter, encounter);
-          // DQX_ACT_Plugin.LogParserMessage("Open: "+target);
           NameClass.Clear();
+          Allies.Clear();
           return;
         }
 
@@ -325,9 +341,8 @@ namespace DQX_ACT_Plugin
         m = regex_close.Match(l);
         if (m.Success)
         {
-          // Advanced_Combat_Tracker.ActGlobals.oFormActMain.ChangeZone("test");
           Advanced_Combat_Tracker.ActGlobals.oFormActMain.EndCombat(true);
-          // DQX_ACT_Plugin.LogParserMessage("Close: ");
+          // Advanced_Combat_Tracker.ActGlobals.oFormActMain.ChangeZone(encounter);
           return;
         }
 
@@ -339,6 +354,7 @@ namespace DQX_ACT_Plugin
           {
             actor = m.Groups["actor"].Success ? DecodeString(m.Groups["actor"].Value) : "";
             action = m.Groups["action"].Success ? DecodeString(m.Groups["action"].Value) : "";
+
             if (!NameClass.ContainsKey(actor))
             {
               if (SkillClass.ContainsKey(action))
@@ -346,6 +362,17 @@ namespace DQX_ACT_Plugin
                 NameClass.Add(actor, SkillClass[action]);
               }
             }
+
+            if ((id.Length > 0) && (actor.Length > 0) && !Allies.Contains(actor))
+            {
+              m = regex_foe.Match(l);
+              if (!m.Success)
+              {
+                // DQX_ACT_Plugin.LogParserMessage(" Add Allies: ." + actor+"."+action+"."+id+".");
+                Allies.Add(actor);
+              }
+            }
+
             return;
           }
           m = regex_action2.Match(l);
@@ -411,26 +438,6 @@ namespace DQX_ACT_Plugin
               target);
 
             Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(ms);
-
-            var e = false;
-            foreach (var a in Allies)
-            {
-              if (a.Name == ms.Attacker)
-              {
-                e = true;
-                break;
-              }
-            }
-            if (ms.Attacker == encounter)
-            {
-              e = true;
-            }
-            if (!e)
-            {
-              CombatantData cd = ms.ParentEncounter.GetCombatant(ms.Attacker);
-              Allies.Add(cd);
-            }
-            ms.ParentEncounter.SetAllies(Allies);
           }
 
           isCritical = false;
@@ -482,26 +489,6 @@ namespace DQX_ACT_Plugin
               target);
 
             Advanced_Combat_Tracker.ActGlobals.oFormActMain.AddCombatAction(ms);
-
-            var e = false;
-            foreach (var a in Allies)
-            {
-              if (a.Name == ms.Attacker)
-              {
-                e = true;
-                break;
-              }
-            }
-            if (ms.Attacker == encounter)
-            {
-              e = true;
-            }
-            if (!e)
-            {
-              CombatantData cd = ms.ParentEncounter.GetCombatant(ms.Attacker);
-              Allies.Add(cd);
-            }
-            ms.ParentEncounter.SetAllies(Allies);
           }
 
           isCritical = false;
@@ -702,9 +689,7 @@ namespace DQX_ACT_Plugin
     {
     };
 
-    public static List<CombatantData> Allies = new List<CombatantData>()
-    {
-    };
+    public static List<string> Allies = new List<string>();
 
     public static Regex regex_open = new Regex(@"(?<target>[^ ]+?)と 戦闘開始！$");
     public static Regex regex_close = new Regex(@" (やっつけた！|いなくなった！|ぜんめつした。|戦いをやめた。|勝利した！)$");
@@ -717,6 +702,8 @@ namespace DQX_ACT_Plugin
     public static Regex regex_heal = new Regex(@"^ → (?<target>.+?)の ＨＰが (?<damage>\d+)回復した！$");
     public static Regex regex_dead = new Regex(@"^ → (?<target>.+?)は しんでしまった。$");
     public static Regex regex_dead2 = new Regex(@"^(?<target>.+?)は しんでしまった。$");
+
+    public static Regex regex_foe = new Regex(@"(怒った|激怒した|みとれている)");
 
     public static string encounter;
     private static string actor;
