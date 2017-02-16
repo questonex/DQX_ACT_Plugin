@@ -195,7 +195,9 @@ namespace DQX_ACT_Plugin
           ActGlobals.oFormActMain.ValidateLists();
         }
 
+#if DEBUGG
         Debug.Initialize();
+#endif
 
         lblStatus.Text = "DQX Plugin Started.";
       }
@@ -213,7 +215,9 @@ namespace DQX_ACT_Plugin
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.BeforeLogLineRead -= LogParse.BeforeLogLineRead;
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.OnCombatEnd -= OnCombatEnd;
 
+#if DEBUGG
       Debug.Uninitialize();
+#endif
 
       if (lblStatus != null)
       {
@@ -715,19 +719,5 @@ namespace DQX_ACT_Plugin
   }
 
   #endregion
-
-#if DEBUGG
-  #region Debug
-  public static class Debug
-  {
-    public static void Initialize()
-    {
-    }
-    public static void Uninitialize()
-    {
-    }
-  }
-  #endregion
-#endif
 
 }
