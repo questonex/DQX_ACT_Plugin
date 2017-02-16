@@ -3,7 +3,7 @@
 // DQX_ACT_Plugin.cs
 // Advanced Combat Tracker Plugin for DQX
 // https://github.com/questonex/DQX_ACT_Plugin
-// 
+//
 // The MIT License(MIT)
 //
 // Copyright (c) 2016 Ravahn
@@ -45,16 +45,16 @@ using System.Net;
 
 namespace DQX_ACT_Plugin
 {
-#region ACT Plugin Code
-  public class DQX_ACT_Plugin : UserControl, Advanced_Combat_Tracker.IActPluginV1
+  #region ACT Plugin Code
+  public class DQX_ACT_Plugin: UserControl, Advanced_Combat_Tracker.IActPluginV1
   {
-#region Designer Created Code (Avoid editing)
-    /// <summary> 
+    #region Designer Created Code (Avoid editing)
+    /// <summary>
     /// Required designer variable.
     /// </summary>
     private System.ComponentModel.IContainer components = null;
 
-    /// <summary> 
+    /// <summary>
     /// Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
@@ -67,8 +67,8 @@ namespace DQX_ACT_Plugin
       base.Dispose(disposing);
     }
 
-    /// <summary> 
-    /// Required method for Designer support - do not modify 
+    /// <summary>
+    /// Required method for Designer support - do not modify
     /// the contents of this method with the code editor.
     /// </summary>
     private void InitializeComponent()
@@ -78,27 +78,27 @@ namespace DQX_ACT_Plugin
       this.cmdClearMessages = new System.Windows.Forms.Button();
       this.cmdCopyProblematic = new System.Windows.Forms.Button();
       this.SuspendLayout();
-      // 
+      //
       // label1
-      // 
+      //
       this.label1.AutoSize = true;
       this.label1.Location = new System.Drawing.Point(11, 12);
       this.label1.Name = "label1";
       this.label1.Size = new System.Drawing.Size(88, 13);
       this.label1.TabIndex = 82;
       this.label1.Text = "Parser Messages";
-      // 
+      //
       // lstMessages
-      // 
+      //
       lstMessages.FormattingEnabled = true;
       lstMessages.Location = new System.Drawing.Point(14, 41);
       lstMessages.Name = "lstMessages";
       lstMessages.ScrollAlwaysVisible = true;
       lstMessages.Size = new System.Drawing.Size(700, 264);
       lstMessages.TabIndex = 81;
-      // 
+      //
       // cmdClearMessages
-      // 
+      //
       this.cmdClearMessages.Location = new System.Drawing.Point(88, 311);
       this.cmdClearMessages.Name = "cmdClearMessages";
       this.cmdClearMessages.Size = new System.Drawing.Size(106, 26);
@@ -106,9 +106,9 @@ namespace DQX_ACT_Plugin
       this.cmdClearMessages.Text = "Clear";
       this.cmdClearMessages.UseVisualStyleBackColor = true;
       this.cmdClearMessages.Click += new System.EventHandler(this.cmdClearMessages_Click);
-      // 
+      //
       // cmdCopyProblematic
-      // 
+      //
       this.cmdCopyProblematic.Location = new System.Drawing.Point(478, 311);
       this.cmdCopyProblematic.Name = "cmdCopyProblematic";
       this.cmdCopyProblematic.Size = new System.Drawing.Size(118, 26);
@@ -116,9 +116,9 @@ namespace DQX_ACT_Plugin
       this.cmdCopyProblematic.Text = "Copy to Clipboard";
       this.cmdCopyProblematic.UseVisualStyleBackColor = true;
       this.cmdCopyProblematic.Click += new System.EventHandler(this.cmdCopyProblematic_Click);
-      // 
+      //
       // UserControl1
-      // 
+      //
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.Controls.Add(this.cmdCopyProblematic);
@@ -137,7 +137,7 @@ namespace DQX_ACT_Plugin
     private System.Windows.Forms.Button cmdClearMessages;
     private System.Windows.Forms.Button cmdCopyProblematic;
 
-#endregion
+    #endregion
 
     public DQX_ACT_Plugin()
     {
@@ -175,7 +175,7 @@ namespace DQX_ACT_Plugin
         // Default Timestamp length, but this can be overridden in parser code.
         Advanced_Combat_Tracker.ActGlobals.oFormActMain.TimeStampLen = DateTime.Now.ToString("HH:mm:ss.fff").Length + 1;
 
-        // Set Date time format parsing. 
+        // Set Date time format parsing.
         Advanced_Combat_Tracker.ActGlobals.oFormActMain.GetDateTimeFromLog = new Advanced_Combat_Tracker.FormActMain.DateTimeLogParser(LogParse.ParseLogDateTime);
 
         // Set primary parser delegate for processing data
@@ -195,7 +195,7 @@ namespace DQX_ACT_Plugin
           ActGlobals.oFormActMain.ValidateLists();
         }
 
-        // TODO: set up Zone Name
+        Debug.Initialize();
 
         lblStatus.Text = "DQX Plugin Started.";
       }
@@ -212,6 +212,8 @@ namespace DQX_ACT_Plugin
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.UpdateCheckClicked -= this.UpdateCheckClicked;
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.BeforeLogLineRead -= LogParse.BeforeLogLineRead;
       Advanced_Combat_Tracker.ActGlobals.oFormActMain.OnCombatEnd -= OnCombatEnd;
+
+      Debug.Uninitialize();
 
       if (lblStatus != null)
       {
@@ -265,7 +267,7 @@ namespace DQX_ACT_Plugin
         }
         encounterInfo.encounter.SetAllies(localAllies);
       }
-      
+
       foreach (var data in encounterInfo.encounter.Items.Values)
       {
         if (LogParse.NameClass.ContainsKey(data.Name))
@@ -280,9 +282,9 @@ namespace DQX_ACT_Plugin
     }
 
   }
-#endregion
+  #endregion
 
-#region Parser Code
+  #region Parser Code
   public static class LogParse
   {
     public static DateTime ParseLogDateTime(string message)
@@ -712,5 +714,20 @@ namespace DQX_ACT_Plugin
     private static bool isCritical = false;
   }
 
-#endregion
+  #endregion
+
+#if DEBUGG
+  #region Debug
+  public static class Debug
+  {
+    public static void Initialize()
+    {
+    }
+    public static void Uninitialize()
+    {
+    }
+  }
+  #endregion
+#endif
+
 }
