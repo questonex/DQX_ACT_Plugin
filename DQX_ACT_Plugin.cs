@@ -144,7 +144,7 @@ namespace DQX_ACT_Plugin
       InitializeComponent();
     }
     // reference to the ACT plugin status label
-    private Label lblStatus = null;
+    public static Label lblStatus = null;
 
     public void InitPlugin(System.Windows.Forms.TabPage pluginScreenSpace, System.Windows.Forms.Label pluginStatusText)
     {
