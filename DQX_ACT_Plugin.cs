@@ -363,9 +363,10 @@ namespace DQX_ACT_Plugin
 
             if (!NameClass.ContainsKey(actor))
             {
-              if (SkillClass.ContainsKey(action))
+              string raction = regex_rank.Replace(action, "");
+              if (SkillClass.ContainsKey(raction))
               {
-                NameClass.Add(actor, SkillClass[action]);
+                NameClass.Add(actor, SkillClass[raction]);
               }
             }
 
@@ -547,6 +548,7 @@ namespace DQX_ACT_Plugin
       return ret;
     }
 
+    public static Regex regex_rank = new Regex(@"[ⅠⅡⅢ]$");
     public static Dictionary<string, string> SkillClass = new Dictionary<string, string>()
     {
       { "かばう", "戦士" },
